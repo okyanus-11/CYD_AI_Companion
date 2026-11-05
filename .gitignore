@@ -1,0 +1,6 @@
+*.local.h
+*.secret.h
+.pio/
+build/
+secrets*
+
