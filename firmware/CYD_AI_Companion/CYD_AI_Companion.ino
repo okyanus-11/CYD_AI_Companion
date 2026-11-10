@@ -5,6 +5,9 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
+#include <time.h>
+
+#include "groq_root_ca.h"
 
 // =====================================================
 // WIFI AND GROQ CONFIGURATION
@@ -420,13 +423,34 @@ bool getTouchPoint(int &x, int &y) {
 // GROQ API
 // =====================================================
 
-String askGroq(String prompt) {
-  WiFiClientSecure client;
+bool synchronizeSystemTime() {
+  const time_t minimumValidTime = 1735689600;  // 2025-01-01 UTC
 
-  // Prototype only: certificate verification is disabled.
-  // Add proper TLS certificate verification before using
-  // this device for sensitive conversations.
-  client.setInsecure();
+  if (time(nullptr) >= minimumValidTime) {
+    return true;
+  }
+
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+
+  unsigned long start = millis();
+  while (time(nullptr) < minimumValidTime) {
+    if (millis() - start >= 15000) {
+      return false;
+    }
+
+    delay(250);
+  }
+
+  return true;
+}
+
+String askGroq(String prompt) {
+  if (!synchronizeSystemTime()) {
+    return "Could not synchronize time for HTTPS";
+  }
+
+  WiFiClientSecure client;
+  client.setCACert(kGroqRootCa);
 
   HTTPClient https;
 
