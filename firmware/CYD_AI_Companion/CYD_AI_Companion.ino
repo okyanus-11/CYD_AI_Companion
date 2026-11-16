@@ -80,6 +80,19 @@ static Preferences themePreferences;
 #define UI_DANGER (UI_PALETTES[activeTheme].danger)
 #define UI_ALT (UI_PALETTES[activeTheme].alternate)
 
+
+// Keep text legible on accent-filled UI surfaces in every saved theme.
+static uint16_t readableTextOn(uint16_t background) {
+  float red = ((background >> 11) & 0x1F) / 31.0f;
+  float green = ((background >> 5) & 0x3F) / 63.0f;
+  float blue = (background & 0x1F) / 31.0f;
+  red = red <= 0.04045f ? red / 12.92f : powf((red + 0.055f) / 1.055f, 2.4f);
+  green = green <= 0.04045f ? green / 12.92f : powf((green + 0.055f) / 1.055f, 2.4f);
+  blue = blue <= 0.04045f ? blue / 12.92f : powf((blue + 0.055f) / 1.055f, 2.4f);
+  const float luminance = 0.2126f * red + 0.7152f * green + 0.0722f * blue;
+  return luminance > 0.179f ? RGB565(16, 21, 29) : RGB565(255, 255, 255);
+}
+
 void cycleTheme() {
   activeTheme = (activeTheme + 1) % (sizeof(UI_PALETTES) / sizeof(UI_PALETTES[0]));
   themePreferences.begin("cyd-ai", false);
@@ -329,7 +342,7 @@ void drawInterface() {
   tft.fillRect(0, 0, SW, 22, UI_ACCENT);
 
   tft.setTextSize(1);
-  tft.setTextColor(UI_TEXT, UI_ACCENT);
+  tft.setTextColor(readableTextOn(UI_ACCENT), UI_ACCENT);
 
   tft.setCursor(5, 7);
   tft.print("CYD AI");
