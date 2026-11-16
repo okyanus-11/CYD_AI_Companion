@@ -17,6 +17,9 @@ Build from `firmware/` with PlatformIO:
 python -m platformio run
 ```
 
+Latest CI build: 46,264 bytes RAM (14.1%) and 786,665 bytes flash
+(25.0% of the 3 MB application partition).
+
 Copy `firmware/CYD_AI_Companion/config.example.h` to `config.h` for local
 Wi-Fi and API settings. Keep `config.h` out of Git.
 
