@@ -46,3 +46,7 @@ than silently disabling TLS verification.
 
 The placeholder `GROQ_ROOT_CA` in the example is empty on purpose. Add the
 verified CA to your private `config.h` before expecting API requests to work.
+
+## Installation
+
+For prerequisites, environment setup, configuration, and run/build commands, see the [installation guide](INSTALLATION.md).
