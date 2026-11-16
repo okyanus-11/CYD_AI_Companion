@@ -5,6 +5,7 @@
 #include <TFT_eSPI.h>
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
+#include <time.h>
 
 // =====================================================
 // WIFI AND GROQ CONFIGURATION
@@ -22,6 +23,10 @@ static const char* const kSsid = WIFI_SSID;
 static const char* const kPassword = WIFI_PASSWORD;
 static const char* const kGroqApiKey = GROQ_API_KEY;
 static const char* const kModel = GROQ_MODEL;
+
+#ifndef GROQ_ROOT_CA
+#define GROQ_ROOT_CA ""
+#endif
 
 const char* API_URL =
     "https://api.groq.com/openai/v1/chat/completions";
@@ -421,12 +426,17 @@ bool getTouchPoint(int &x, int &y) {
 // =====================================================
 
 String askGroq(String prompt) {
-  WiFiClientSecure client;
+  // Fail closed unless a trusted root CA has been configured. Never fall back
+  // to setInsecure(): that would allow a network attacker to impersonate Groq.
+  if (strlen(GROQ_ROOT_CA) < 100) {
+    return "TLS CA missing: set GROQ_ROOT_CA in config.h";
+  }
+  if (time(nullptr) < 1700000000) {
+    return "Clock not synchronized; HTTPS verification unavailable";
+  }
 
-  // Prototype only: certificate verification is disabled.
-  // Add proper TLS certificate verification before using
-  // this device for sensitive conversations.
-  client.setInsecure();
+  WiFiClientSecure client;
+  client.setCACert(GROQ_ROOT_CA);
 
   HTTPClient https;
 
@@ -761,6 +771,21 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     statusText = "Wi-Fi connected";
+
+    // Certificate validity dates are checked during TLS verification.
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    unsigned long timeSyncStart = millis();
+    while (time(nullptr) < 1700000000 &&
+           millis() - timeSyncStart < 15000) {
+      delay(250);
+    }
+    if (time(nullptr) < 1700000000) {
+      statusText = "Clock sync failed; HTTPS unavailable";
+    } else if (strlen(GROQ_ROOT_CA) < 100) {
+      statusText = "Set GROQ_ROOT_CA in config.h";
+    } else {
+      statusText = "Wi-Fi and TLS ready";
+    }
 
     addMessage(
         "assistant",
