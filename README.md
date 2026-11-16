@@ -10,4 +10,28 @@ python -m platformio run
 ```
 
 Copy `firmware/CYD_AI_Companion/config.example.h` to `config.h` for local
-Wi-Fi and API settings. The example file documents the fields.
+Wi-Fi and API settings. Keep `config.h` out of Git.
+
+## HTTPS certificate verification
+
+The firmware verifies Groq's HTTPS certificate and deliberately fails closed
+if a trusted CA certificate is not configured. Set `GROQ_ROOT_CA` in your
+local `config.h` to the PEM root CA that validates the current certificate
+chain for `api.groq.com`. Use a raw string literal for the multiline PEM:
+
+```cpp
+#define GROQ_ROOT_CA R"EOF(
+-----BEGIN CERTIFICATE-----
+... trusted root CA certificate ...
+-----END CERTIFICATE-----
+)EOF"
+```
+
+Do not paste the server's short-lived leaf certificate: use the trusted root
+CA, and verify the hostname and chain before trusting it. The device also
+synchronizes its clock with NTP because certificate validity dates must be
+checked. If the CA or clock is unavailable, API requests are rejected rather
+than silently disabling TLS verification.
+
+The placeholder `GROQ_ROOT_CA` in the example is empty on purpose. Add the
+verified CA to your private `config.h` before expecting API requests to work.
