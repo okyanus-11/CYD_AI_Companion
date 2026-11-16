@@ -890,5 +890,8 @@ void loop() {
     }
 
     delay(100);
+  } else {
+    // Let the Wi-Fi stack and watchdog run while the screen is idle.
+    delay(10);
   }
 }
