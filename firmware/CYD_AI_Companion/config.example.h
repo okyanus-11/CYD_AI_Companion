@@ -10,3 +10,13 @@
 // Check https://console.groq.com/docs/models for currently served models.
 // openai/gpt-oss-20b was the last model used by the original project.
 #define GROQ_MODEL      "openai/gpt-oss-20b"
+
+// Required for verified HTTPS. Paste the PEM root CA certificate that chains
+// api.groq.com to a CA you trust. Leave empty to fail closed (no API requests).
+// Use a raw string literal for the multiline PEM:
+// #define GROQ_ROOT_CA R"EOF(
+// -----BEGIN CERTIFICATE-----
+// ... trusted root CA PEM ...
+// -----END CERTIFICATE-----
+// )EOF"
+#define GROQ_ROOT_CA    ""
