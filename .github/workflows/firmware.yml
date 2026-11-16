@@ -18,5 +18,7 @@ jobs:
           python-version: "3.12"
       - name: Install PlatformIO
         run: python -m pip install --upgrade platformio
+      - name: Create a private placeholder config for CI
+        run: cp firmware/CYD_AI_Companion/config.example.h firmware/CYD_AI_Companion/config.h
       - name: Compile firmware
         run: pio run -d firmware
