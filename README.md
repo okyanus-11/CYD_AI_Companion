@@ -49,4 +49,4 @@ verified CA to your private `config.h` before expecting API requests to work.
 
 ## Installation
 
-For prerequisites, environment setup, configuration, and run/build commands, see the [installation guide](INSTALLATION.md).
+Requires an ESP32-2432S028 CYD, USB data cable, PlatformIO and a Groq API key. Copy the firmware's `config.example.h` to `config.h`, enter Wi-Fi/API settings and configure the trusted Groq root CA, then build and upload from `firmware/` with `pio run` and `pio run -t upload --upload-port COMx`. See the [full installation and flashing guide](INSTALLATION.md).
