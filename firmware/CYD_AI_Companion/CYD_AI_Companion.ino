@@ -6,6 +6,7 @@
 #include <XPT2046_Touchscreen.h>
 #include <SPI.h>
 #include <time.h>
+#include <Preferences.h>
 
 // =====================================================
 // WIFI AND GROQ CONFIGURATION
@@ -53,6 +54,36 @@ XPT2046_Touchscreen touch(TOUCH_CS, TOUCH_IRQ);
 
 const int SW = 320;
 const int SH = 240;
+
+#define RGB565(r, g, b) (uint16_t)((((r) & 0xF8) << 8) | (((g) & 0xFC) << 3) | ((b) >> 3))
+struct UiPalette {
+  uint16_t background, panel, border, text, muted;
+  uint16_t accent, success, warning, danger, alternate;
+};
+static const UiPalette UI_PALETTES[] = {
+  {RGB565(16,21,29),RGB565(23,31,42),RGB565(44,57,72),RGB565(237,243,248),RGB565(154,171,186),RGB565(120,170,255),RGB565(88,201,154),RGB565(232,189,120),RGB565(232,121,121),RGB565(181,156,255)},
+  {RGB565(17,17,27),RGB565(26,26,42),RGB565(56,56,79),RGB565(236,236,247),RGB565(162,162,191),RGB565(181,156,255),RGB565(120,214,176),RGB565(230,197,139),RGB565(232,121,121),RGB565(120,170,255)},
+  {RGB565(242,245,249),RGB565(255,255,255),RGB565(215,224,233),RGB565(32,43,58),RGB565(102,119,138),RGB565(50,111,209),RGB565(22,132,92),RGB565(166,107,23),RGB565(185,67,67),RGB565(118,84,197)}
+};
+static uint8_t activeTheme = 0;
+static Preferences themePreferences;
+#define UI_BG (UI_PALETTES[activeTheme].background)
+#define UI_PANEL (UI_PALETTES[activeTheme].panel)
+#define UI_BORDER (UI_PALETTES[activeTheme].border)
+#define UI_TEXT (UI_PALETTES[activeTheme].text)
+#define UI_MUTED (UI_PALETTES[activeTheme].muted)
+#define UI_ACCENT (UI_PALETTES[activeTheme].accent)
+#define UI_SUCCESS (UI_PALETTES[activeTheme].success)
+#define UI_WARNING (UI_PALETTES[activeTheme].warning)
+#define UI_DANGER (UI_PALETTES[activeTheme].danger)
+#define UI_ALT (UI_PALETTES[activeTheme].alternate)
+
+void cycleTheme() {
+  activeTheme = (activeTheme + 1) % (sizeof(UI_PALETTES) / sizeof(UI_PALETTES[0]));
+  themePreferences.begin("cyd-ai", false);
+  themePreferences.putUChar("theme", activeTheme);
+  themePreferences.end();
+}
 
 // =====================================================
 // CHAT HISTORY
@@ -160,10 +191,10 @@ int getLineCount(String text, int width) {
 
 void drawChat() {
   tft.fillRect(
-      CHAT_X, CHAT_Y, CHAT_W, CHAT_H, TFT_BLACK);
+      CHAT_X, CHAT_Y, CHAT_W, CHAT_H, UI_BG);
 
   tft.drawRect(
-      CHAT_X, CHAT_Y, CHAT_W, CHAT_H, TFT_DARKGREY);
+      CHAT_X, CHAT_Y, CHAT_W, CHAT_H, UI_BORDER);
 
   const int charsPerLine = 49;
   const int lineHeight = 10;
@@ -181,7 +212,7 @@ void drawChat() {
     bool isUser = history[i].role == "user";
 
     lines[totalLines] = isUser ? "YOU:" : "AI:";
-    colors[totalLines] = isUser ? TFT_CYAN : TFT_GREEN;
+    colors[totalLines] = isUser ? UI_ACCENT : UI_SUCCESS;
     totalLines++;
 
     String content = history[i].content;
@@ -207,7 +238,7 @@ void drawChat() {
       part.trim();
 
       lines[totalLines] = part;
-      colors[totalLines] = TFT_WHITE;
+      colors[totalLines] = UI_TEXT;
       totalLines++;
 
       start = end;
@@ -220,7 +251,7 @@ void drawChat() {
 
     if (content.length() == 0 && totalLines < 99) {
       lines[totalLines] = "(empty)";
-      colors[totalLines] = TFT_RED;
+      colors[totalLines] = UI_DANGER;
       totalLines++;
     }
   }
@@ -244,7 +275,7 @@ void drawChat() {
   for (int i = firstLine; i < lastLine; i++) {
     int y = CHAT_Y + 4 + (i - firstLine) * lineHeight;
 
-    tft.setTextColor(colors[i], TFT_BLACK);
+    tft.setTextColor(colors[i], UI_BG);
     tft.setCursor(CHAT_X + 4, y);
     tft.print(lines[i]);
   }
@@ -262,11 +293,11 @@ void drawKeyboardRow(String keys, int y) {
 
     tft.fillRoundRect(
         x + 1, y, keyW - 2, KEY_H - 1,
-        3, TFT_NAVY);
+        3, UI_PANEL);
 
     tft.drawRoundRect(
         x + 1, y, keyW - 2, KEY_H - 1,
-        3, TFT_LIGHTGREY);
+        3, UI_MUTED);
 
     char c = keys[i];
 
@@ -275,7 +306,7 @@ void drawKeyboardRow(String keys, int y) {
     }
 
     tft.setTextSize(1);
-    tft.setTextColor(TFT_WHITE, TFT_NAVY);
+    tft.setTextColor(UI_TEXT, UI_PANEL);
 
     tft.setCursor(
         x + (keyW - 6) / 2,
@@ -290,13 +321,13 @@ void drawKeyboardRow(String keys, int y) {
 // =====================================================
 
 void drawInterface() {
-  tft.fillScreen(TFT_BLACK);
+  tft.fillScreen(UI_BG);
 
   // Header
-  tft.fillRect(0, 0, SW, 22, TFT_DARKCYAN);
+  tft.fillRect(0, 0, SW, 22, UI_ACCENT);
 
   tft.setTextSize(1);
-  tft.setTextColor(TFT_WHITE, TFT_DARKCYAN);
+  tft.setTextColor(UI_TEXT, UI_ACCENT);
 
   tft.setCursor(5, 7);
   tft.print("CYD AI");
@@ -308,6 +339,8 @@ void drawInterface() {
   } else {
     tft.print("OFFLINE");
   }
+  tft.setCursor(270, 7);
+  tft.print("THEME");
 
   // Chat history
   drawChat();
@@ -315,13 +348,13 @@ void drawInterface() {
   // Input box
   tft.fillRoundRect(
       4, INPUT_Y, 312, INPUT_H,
-      3, TFT_DARKGREY);
+      3, UI_BORDER);
 
   tft.drawRoundRect(
       4, INPUT_Y, 312, INPUT_H,
-      3, TFT_LIGHTGREY);
+      3, UI_MUTED);
 
-  tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  tft.setTextColor(UI_TEXT, UI_BORDER);
   tft.setCursor(9, INPUT_Y + 7);
 
   String visibleInput = inputText;
@@ -342,25 +375,25 @@ void drawInterface() {
   // SHIFT
   tft.fillRoundRect(
       2, ACTION_Y, 43, ACTION_H,
-      3, TFT_MAROON);
+      3, UI_DANGER);
 
-  tft.setTextColor(TFT_WHITE, TFT_MAROON);
+  tft.setTextColor(UI_TEXT, UI_DANGER);
   tft.setCursor(5, ACTION_Y + 6);
   tft.print("SHIFT");
 
   // SPACE
   tft.fillRoundRect(
       47, ACTION_Y, 52, ACTION_H,
-      3, TFT_DARKGREY);
+      3, UI_BORDER);
 
-  tft.setTextColor(TFT_WHITE, TFT_DARKGREY);
+  tft.setTextColor(UI_TEXT, UI_BORDER);
   tft.setCursor(52, ACTION_Y + 6);
   tft.print("SPACE");
 
   // DELETE
   tft.fillRoundRect(
       101, ACTION_Y, 40, ACTION_H,
-      3, TFT_DARKGREY);
+      3, UI_BORDER);
 
   tft.setCursor(105, ACTION_Y + 6);
   tft.print("DEL");
@@ -368,7 +401,7 @@ void drawInterface() {
   // CLEAR
   tft.fillRoundRect(
       143, ACTION_Y, 49, ACTION_H,
-      3, TFT_DARKGREY);
+      3, UI_BORDER);
 
   tft.setCursor(146, ACTION_Y + 6);
   tft.print("CLEAR");
@@ -376,15 +409,15 @@ void drawInterface() {
   // SEND
   tft.fillRoundRect(
       194, ACTION_Y, 124, ACTION_H,
-      3, TFT_GREEN);
+      3, UI_SUCCESS);
 
-  tft.setTextColor(TFT_BLACK, TFT_GREEN);
+  tft.setTextColor(UI_BG, UI_SUCCESS);
   tft.setCursor(240, ACTION_Y + 6);
 
   tft.print(waitingForAI ? "WAIT..." : "SEND");
 
   // Status
-  tft.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
+  tft.setTextColor(UI_MUTED, UI_BG);
   tft.setCursor(4, STATUS_Y);
 
   tft.print(statusText.substring(0, 52));
@@ -634,6 +667,12 @@ void sendMessage() {
 // =====================================================
 
 void handleTouch(int x, int y) {
+  if (y < 22 && x >= 265) {
+    cycleTheme();
+    drawInterface();
+    return;
+  }
+
   // Chat scrolling
   if (y >= CHAT_Y && y < CHAT_Y + CHAT_H) {
     // Top half scrolls back through older messages; bottom half returns to
@@ -733,6 +772,10 @@ void setup() {
 
   tft.init();
   tft.setRotation(1);
+  themePreferences.begin("cyd-ai", true);
+  activeTheme = themePreferences.getUChar("theme", 0);
+  themePreferences.end();
+  if (activeTheme >= sizeof(UI_PALETTES) / sizeof(UI_PALETTES[0])) activeTheme = 0;
 
   touchSPI.begin(
       TOUCH_SCK,
@@ -743,8 +786,8 @@ void setup() {
   touch.begin(touchSPI);
   touch.setRotation(1);
 
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(TFT_GREEN, TFT_BLACK);
+  tft.fillScreen(UI_BG);
+  tft.setTextColor(UI_SUCCESS, UI_BG);
   tft.setTextSize(2);
   tft.setCursor(10, 20);
 
