@@ -215,8 +215,10 @@ void drawChat() {
   const int lineHeight = 10;
   const int maxVisibleLines = (CHAT_H - 6) / lineHeight;
 
-  String lines[100];
-  uint16_t colors[100];
+  // Keep the transcript workspace out of the loop task's stack. These
+  // reusable buffers avoid a large stack allocation on every redraw.
+  static String lines[100];
+  static uint16_t colors[100];
   int totalLines = 0;
 
   for (int i = 0; i < messageCount; i++) {
