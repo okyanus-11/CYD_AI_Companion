@@ -14,8 +14,10 @@
 
 // Local credentials live in config.h (git-ignored). config.example.h documents
 // the fields; the repository ships placeholders only.
-#if __has_include("config.h")
-#include "config.h"
+// Anchor the optional private config to this sketch directory so an
+// unrelated config.h elsewhere on the PlatformIO include path cannot shadow it.
+#if __has_include("./config.h")
+#include "./config.h"
 #else
 #include "config.example.h"
 #endif
