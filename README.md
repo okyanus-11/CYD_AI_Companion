@@ -3,6 +3,14 @@
 Recovered ESP32-2432S028 touchscreen chat firmware using Wi-Fi and the Groq
 chat-completions API.
 
+## Appearance
+
+Tap **THEME** in the top-right of the header to cycle Graphite, Midnight and
+Light palettes. The selected theme is stored in ESP32 Preferences and survives
+reboots.
+
+## Build
+
 Build from `firmware/` with PlatformIO:
 
 ```bash
